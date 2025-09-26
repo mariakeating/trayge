@@ -46,9 +46,13 @@ typedef enum dbus_tray_property_type
     DBusTrayProperty_Id,
     DBusTrayProperty_Title,
     DBusTrayProperty_Status,
-    //DBusTrayProperty_Menu,
+    DBusTrayProperty_IconThemePath,
+    DBusTrayProperty_Menu,
     DBusTrayProperty_ItemIsMenu,
+    DBusTrayProperty_IconName,
     DBusTrayProperty_IconPixmap,
+    DBusTrayProperty_AttentionIconName,
+    DBusTrayProperty_AttentionIconPixmap,
     
     DBusTrayProperty_Count,
 } dbus_tray_property_type;

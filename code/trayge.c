@@ -209,21 +209,39 @@ TrayPropertyTypeToName(dbus_tray_property_type Type)
             Result = "Status";
         } break;
         
-#if 0
+        case DBusTrayProperty_IconThemePath:
+        {
+            Result = "IconThemePath";
+        } break;
+        
         case DBusTrayProperty_Menu:
         {
             Result = "Menu";
         } break;
-#endif
         
         case DBusTrayProperty_ItemIsMenu:
         {
             Result = "ItemIsMenu";
         } break;
         
+        case DBusTrayProperty_IconName:
+        {
+            Result = "IconName";
+        } break;
+        
         case DBusTrayProperty_IconPixmap:
         {
             Result = "IconPixmap";
+        } break;
+        
+        case DBusTrayProperty_AttentionIconName:
+        {
+            Result = "AttentionIconName";
+        } break;
+        
+        case DBusTrayProperty_AttentionIconPixmap:
+        {
+            Result = "AttentionIconPixmap";
         } break;
         
         case DBusTrayProperty_Unhandled:
@@ -282,17 +300,26 @@ AppendTrayPropertyVariant(trayge_state *State, dbus_tray_property_type Type, DBu
             }
         } break;
         
-#if 0
+        case DBusTrayProperty_IconThemePath:
+        {
+            DeferLoop(dbus_message_iter_open_container(Parent, DBUS_TYPE_VARIANT, "s", &Variant),
+                      dbus_message_iter_close_container(Parent, &Variant))
+            {
+                char *Value = "";
+                dbus_message_iter_append_basic(&Variant, DBUS_TYPE_STRING, &Value);
+            }
+        } break;
+        
         case DBusTrayProperty_Menu:
         {
             DeferLoop(dbus_message_iter_open_container(Parent, DBUS_TYPE_VARIANT, "o", &Variant),
                       dbus_message_iter_close_container(Parent, &Variant))
             {
-                char *Value = "/MenuBar";
+                //char *Value = "/MenuBar";
+                char *Value = "/";
                 dbus_message_iter_append_basic(&Variant, DBUS_TYPE_OBJECT_PATH, &Value);
             }
         } break;
-#endif
         
         case DBusTrayProperty_ItemIsMenu:
         {
@@ -301,6 +328,16 @@ AppendTrayPropertyVariant(trayge_state *State, dbus_tray_property_type Type, DBu
             {
                 b32 Value = false;
                 dbus_message_iter_append_basic(&Variant, DBUS_TYPE_BOOLEAN, &Value);
+            }
+        } break;
+        
+        case DBusTrayProperty_IconName:
+        {
+            DeferLoop(dbus_message_iter_open_container(Parent, DBUS_TYPE_VARIANT, "s", &Variant),
+                      dbus_message_iter_close_container(Parent, &Variant))
+            {
+                char *Value = "";
+                dbus_message_iter_append_basic(&Variant, DBUS_TYPE_STRING, &Value);
             }
         } break;
         
@@ -353,6 +390,29 @@ AppendTrayPropertyVariant(trayge_state *State, dbus_tray_property_type Type, DBu
             
             ++State->XOffset;
             State->YOffset += 2;
+        } break;
+        
+        case DBusTrayProperty_AttentionIconName:
+        {
+            DeferLoop(dbus_message_iter_open_container(Parent, DBUS_TYPE_VARIANT, "s", &Variant),
+                      dbus_message_iter_close_container(Parent, &Variant))
+            {
+                char *Value = "";
+                dbus_message_iter_append_basic(&Variant, DBUS_TYPE_STRING, &Value);
+            }
+        } break;
+        
+        case DBusTrayProperty_AttentionIconPixmap:
+        {
+            DeferLoop(dbus_message_iter_open_container(Parent, DBUS_TYPE_VARIANT, "a(iiay)", &Variant),
+                      dbus_message_iter_close_container(Parent, &Variant))
+            {
+                DBusMessageIter IconsArray = {};
+                DeferLoop(dbus_message_iter_open_container(&Variant, DBUS_TYPE_ARRAY, "(iiay)", &IconsArray),
+                          dbus_message_iter_close_container(&Variant, &IconsArray))
+                {
+                }
+            }
         } break;
         
         InvalidDefaultCase;
@@ -418,19 +478,33 @@ HandleDBusMessage(DBusConnection *Connection, DBusMessage *Message, void *UserDa
                     {
                         PropertyType = DBusTrayProperty_Status;
                     }
-#if 0
+                    else if(StringsAreEqual(RequestedProperty, StrLit("IconThemePath"), 0))
+                    {
+                        PropertyType = DBusTrayProperty_IconThemePath;
+                    }
                     else if(StringsAreEqual(RequestedProperty, StrLit("Menu"), 0))
                     {
                         PropertyType = DBusTrayProperty_Menu;
                     }
-#endif
                     else if(StringsAreEqual(RequestedProperty, StrLit("ItemIsMenu"), 0))
                     {
                         PropertyType = DBusTrayProperty_ItemIsMenu;
                     }
+                    else if(StringsAreEqual(RequestedProperty, StrLit("IconName"), 0))
+                    {
+                        PropertyType = DBusTrayProperty_IconName;
+                    }
                     else if(StringsAreEqual(RequestedProperty, StrLit("IconPixmap"), 0))
                     {
                         PropertyType = DBusTrayProperty_IconPixmap;
+                    }
+                    else if(StringsAreEqual(RequestedProperty, StrLit("AttentionIconName"), 0))
+                    {
+                        PropertyType = DBusTrayProperty_AttentionIconName;
+                    }
+                    else if(StringsAreEqual(RequestedProperty, StrLit("AttentionIconPixmap"), 0))
+                    {
+                        PropertyType = DBusTrayProperty_AttentionIconPixmap;
                     }
                     
                     if(PropertyType != DBusTrayProperty_Unhandled)
