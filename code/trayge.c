@@ -371,7 +371,7 @@ AppendTrayPropertyVariant(trayge_state *State, dbus_tray_property_type Type, DBu
                           dbus_message_iter_close_container(&Variant, &IconsArray))
                 {
                     DBusMessageIter IconsEntry = {};
-                    DeferLoop(dbus_message_iter_open_container(&IconsArray, DBUS_TYPE_STRUCT, "iiay", &IconsEntry),
+                    DeferLoop(dbus_message_iter_open_container(&IconsArray, DBUS_TYPE_STRUCT, 0, &IconsEntry),
                               dbus_message_iter_close_container(&IconsArray, &IconsEntry))
                     {
                         dbus_message_iter_append_basic(&IconsEntry, DBUS_TYPE_INT32, &Width);
@@ -533,7 +533,7 @@ HandleDBusMessage(DBusConnection *Connection, DBusMessage *Message, void *UserDa
                             PropertyIndex < DBusTrayProperty_Count;
                             ++PropertyIndex)
                         {
-                            DeferLoop(dbus_message_iter_open_container(&PropertiesArray, DBUS_TYPE_DICT_ENTRY, "sv", &PropertyEntry),
+                            DeferLoop(dbus_message_iter_open_container(&PropertiesArray, DBUS_TYPE_DICT_ENTRY, 0, &PropertyEntry),
                                       dbus_message_iter_close_container(&PropertiesArray, &PropertyEntry))
                             {
                                 char *TypeString = TrayPropertyTypeToName(PropertyIndex);
