@@ -543,7 +543,6 @@ main(int ArgumentCount, char **Arguments)
         
         PollHandles[PollHandleCount++] = (struct pollfd){TimerHandle, POLLIN, 0};
         
-        u32 WatchBaseIndex = PollHandleCount;
         for(dbus_watch_entry *WatchEntry = State.WatchSentinel.Next;
             WatchEntry != &State.WatchSentinel;
             WatchEntry = WatchEntry->Next)
@@ -551,7 +550,6 @@ main(int ArgumentCount, char **Arguments)
             PollHandles[PollHandleCount++] = (struct pollfd){WatchEntry->FileHandle, (s16)WatchEntry->PollFlags, 0};
         }
         
-        u32 TimeoutBaseIndex = PollHandleCount;
         for(dbus_timeout_entry *TimeoutEntry = State.TimeoutSentinel.Next;
             TimeoutEntry != &State.TimeoutSentinel;
             TimeoutEntry = TimeoutEntry->Next)
@@ -571,65 +569,78 @@ main(int ArgumentCount, char **Arguments)
             dbus_message_unref(Message);
         }
         
-        u32 WatchIndex = WatchBaseIndex;
-        for(dbus_watch_entry *WatchEntry = State.WatchSentinel.Next;
-            WatchEntry != &State.WatchSentinel;
-            ++WatchIndex)
+        for(u32 PollIndex = 1;
+            PollIndex < PollHandleCount;
+            ++PollIndex)
         {
-            dbus_watch_entry *NextWatchEntry = WatchEntry->Next;
+            struct pollfd *PollEntry = PollHandles + PollIndex;
             
-            if(PollHandles[WatchIndex].revents)
+            b32 Found = false;
+            
+            for(dbus_watch_entry *WatchEntry = State.WatchSentinel.Next;
+                !Found && WatchEntry != &State.WatchSentinel;
+                WatchEntry = WatchEntry->Next)
             {
-                u32 WatchFlags = 0;
-                
-                if(PollHandles[WatchIndex].revents & POLLIN)
+                if(PollEntry->fd == WatchEntry->FileHandle)
                 {
-                    WatchFlags |= DBUS_WATCH_READABLE;
-                }
-                
-                if(PollHandles[WatchIndex].revents & POLLOUT)
-                {
-                    WatchFlags |= DBUS_WATCH_WRITABLE;
-                }
-                
-                if(PollHandles[WatchIndex].revents & POLLERR)
-                {
-                    WatchFlags |= DBUS_WATCH_ERROR;
-                }
-                
-                if(PollHandles[WatchIndex].revents & POLLHUP)
-                {
-                    WatchFlags |= DBUS_WATCH_HANGUP;
-                }
-                
-                dbus_watch_handle(WatchEntry->WatchHandle, WatchFlags);
-            }
-            
-            WatchEntry = NextWatchEntry;
-        }
-        
-        u32 TimeoutIndex = TimeoutBaseIndex;
-        for(dbus_timeout_entry *TimeoutEntry = State.TimeoutSentinel.Next;
-            TimeoutEntry != &State.TimeoutSentinel;
-            ++TimeoutIndex)
-        {
-            dbus_timeout_entry *NextTimeoutEntry = TimeoutEntry->Next;
-            
-            if(PollHandles[WatchIndex].revents & POLLIN)
-            {
-                u64 TriggerCount = 0;
-                if(WrappedRead(TimeoutEntry->FileHandle, &TriggerCount, sizeof(TriggerCount)).Count == sizeof(TriggerCount))
-                {
-                    for(u64 TriggerIndex = 0;
-                        TriggerIndex < TriggerCount;
-                        ++TriggerIndex)
+                    Found = true;
+                    
+                    if(PollEntry->revents)
                     {
-                        dbus_timeout_handle(TimeoutEntry->TimeoutHandle);
+                        u32 WatchFlags = 0;
+                        
+                        if(PollEntry->revents & POLLIN)
+                        {
+                            WatchFlags |= DBUS_WATCH_READABLE;
+                        }
+                        
+                        if(PollEntry->revents & POLLOUT)
+                        {
+                            WatchFlags |= DBUS_WATCH_WRITABLE;
+                        }
+                        
+                        if(PollEntry->revents & POLLERR)
+                        {
+                            WatchFlags |= DBUS_WATCH_ERROR;
+                        }
+                        
+                        if(PollEntry->revents & POLLHUP)
+                        {
+                            WatchFlags |= DBUS_WATCH_HANGUP;
+                        }
+                        
+                        dbus_watch_handle(WatchEntry->WatchHandle, WatchFlags);
                     }
+                    
+                    break;
                 }
             }
             
-            TimeoutEntry = NextTimeoutEntry;
+            for(dbus_timeout_entry *TimeoutEntry = State.TimeoutSentinel.Next;
+                !Found && TimeoutEntry != &State.TimeoutSentinel;
+                TimeoutEntry = TimeoutEntry->Next)
+            {
+                if(PollEntry->fd == TimeoutEntry->FileHandle)
+                {
+                    Found = true;
+                    
+                    if(PollEntry->revents & POLLIN)
+                    {
+                        u64 TriggerCount = 0;
+                        if(WrappedRead(TimeoutEntry->FileHandle, &TriggerCount, sizeof(TriggerCount)).Count == sizeof(TriggerCount))
+                        {
+                            for(u64 TriggerIndex = 0;
+                                TriggerIndex < TriggerCount;
+                                ++TriggerIndex)
+                            {
+                                dbus_timeout_handle(TimeoutEntry->TimeoutHandle);
+                            }
+                        }
+                    }
+                    
+                    break;
+                }
+            }
         }
         
         while(dbus_connection_get_dispatch_status(State.Connection) != DBUS_DISPATCH_COMPLETE)
